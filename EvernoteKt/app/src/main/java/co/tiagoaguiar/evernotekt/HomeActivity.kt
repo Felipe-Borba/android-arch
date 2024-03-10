@@ -17,7 +17,9 @@ import io.reactivex.Observable
 import io.reactivex.Observer
 import io.reactivex.Scheduler
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
+import io.reactivex.observers.DisposableObserver
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.app_bar_home.*
@@ -29,6 +31,7 @@ import retrofit2.Response
 class HomeActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     private val dataSource = RemoteDataSource()
+    private val compositeDisposable = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,64 +66,30 @@ class HomeActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onStart() {
         super.onStart()
-        dataSource.listNotes(callback)
-
-        val subscriber = createSubscriber()
-        val channel = createChannel()
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-        channel.subscribe(subscriber)
+        getAllNotes()
     }
 
-    fun createChannel(): Observable<String> {
-        return Observable.create { emitter ->
-            println(Thread.currentThread().name)
-            emitter.onNext("Bem vindo ao canal")
-            emitter.onComplete()
-        }
+    override fun onStop() {
+        super.onStop()
+        compositeDisposable.clear()
     }
 
-    fun createSubscriber(): Observer<String> {
-        return object : Observer<String> {
-            override fun onComplete() {
-                println("Novo valor emitido")
-                println(Thread.currentThread().name)
-            }
+    private fun getAllNotes() {
+        val disposable = dataSource.listNotes().subscribeWith(notesObserver)
+        compositeDisposable.add(disposable)
+    }
 
-            override fun onSubscribe(d: Disposable) {
-                println("Incrição completa")
-            }
-
-            override fun onNext(t: String) {
-                println("Novo valor: $t")
+    private val notesObserver: DisposableObserver<List<Note>>
+        get() = object : DisposableObserver<List<Note>>() {
+            override fun onComplete() {}
+            override fun onNext(notes: List<Note>) {
+                displayNotes(notes)
             }
 
             override fun onError(e: Throwable) {
-                println("novo erro: ${e.message}")
-            }
-        }
-    }
-
-    private val callback: Callback<List<Note>>
-        get() = object : Callback<List<Note>> {
-
-            override fun onFailure(call: retrofit2.Call<List<Note>>, t: Throwable) {
-                t.printStackTrace()
+                e.printStackTrace()
                 displayError("Erro ao carregar notas")
             }
-
-            override fun onResponse(
-                call: retrofit2.Call<List<Note>>,
-                response: Response<List<Note>>
-            ) {
-                if (response.isSuccessful) {
-                    val notes = response.body()
-                    notes?.let {
-                        displayNotes(it)
-                    }
-                }
-            }
-
         }
 
     fun displayError(message: String) {

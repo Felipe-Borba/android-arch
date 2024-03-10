@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import co.tiagoaguiar.evernotekt.model.Note
 import co.tiagoaguiar.evernotekt.model.RemoteDataSource
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.observers.DisposableObserver
 import kotlinx.android.synthetic.main.activity_form.*
 import kotlinx.android.synthetic.main.content_form.*
 import retrofit2.Callback
@@ -23,6 +25,7 @@ class FormActivity : AppCompatActivity(), TextWatcher {
     private var noteId: Int? = null
 
     private val dataSource = RemoteDataSource()
+    private val compositeDisposable = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,8 +43,14 @@ class FormActivity : AppCompatActivity(), TextWatcher {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        compositeDisposable.clear()
+    }
+
     private fun getNote(noteId: Int) {
-        dataSource.getNote(noteId, callback)
+        val disposable = dataSource.getNote(noteId).subscribeWith(getNoteObserver)
+        compositeDisposable.add(disposable)
     }
 
     private fun setupViews() {
@@ -67,44 +76,30 @@ class FormActivity : AppCompatActivity(), TextWatcher {
         }
     }
 
+    private val getNoteObserver: DisposableObserver<Note>
+        get() = object : DisposableObserver<Note>() {
+            override fun onComplete() {}
+            override fun onNext(note: Note) {
+                displayNote(note)
+            }
 
-    private val callback: Callback<Note>
-        get() = object : Callback<Note> {
-
-            override fun onFailure(call: retrofit2.Call<Note>, t: Throwable) {
-                t.printStackTrace()
+            override fun onError(e: Throwable) {
+                e.printStackTrace()
                 displayError("Erro ao carregar nota")
             }
-
-            override fun onResponse(
-                call: retrofit2.Call<Note>,
-                response: Response<Note>
-            ) {
-                if (response.isSuccessful) {
-                    val note = response.body()
-                    displayNote(note)
-                }
-            }
-
         }
 
-    private val callbackCreate: Callback<Note>
-        get() = object : Callback<Note> {
+    private val createObserver: DisposableObserver<Note>
+        get() = object : DisposableObserver<Note>() {
+            override fun onComplete() {}
+            override fun onNext(note: Note) {
+                finish()
+            }
 
-            override fun onFailure(call: retrofit2.Call<Note>, t: Throwable) {
-                t.printStackTrace()
+            override fun onError(e: Throwable) {
+                e.printStackTrace()
                 displayError("Erro ao criar nota")
             }
-
-            override fun onResponse(
-                call: retrofit2.Call<Note>,
-                response: Response<Note>
-            ) {
-                if (response.isSuccessful) {
-                    finish()
-                }
-            }
-
         }
 
     fun displayError(message: String) {
@@ -133,7 +128,8 @@ class FormActivity : AppCompatActivity(), TextWatcher {
                 note.title = note_title.text.toString()
                 note.body = note_editor.text.toString()
 
-                dataSource.createNote(note, callbackCreate)
+                val disposable = dataSource.createNote(note).subscribeWith(createObserver)
+                compositeDisposable.add(disposable)
 
                 true
             } else {
