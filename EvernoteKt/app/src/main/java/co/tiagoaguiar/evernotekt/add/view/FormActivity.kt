@@ -1,4 +1,4 @@
-package co.tiagoaguiar.evernotekt
+package co.tiagoaguiar.evernotekt.add.view
 
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -10,14 +10,13 @@ import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import co.tiagoaguiar.evernotekt.R
 import co.tiagoaguiar.evernotekt.model.Note
 import co.tiagoaguiar.evernotekt.model.RemoteDataSource
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.observers.DisposableObserver
 import kotlinx.android.synthetic.main.activity_form.*
 import kotlinx.android.synthetic.main.content_form.*
-import retrofit2.Callback
-import retrofit2.Response
 
 class FormActivity : AppCompatActivity(), TextWatcher {
 
