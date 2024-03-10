@@ -11,20 +11,18 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import co.tiagoaguiar.evernotekt.R
-import co.tiagoaguiar.evernotekt.model.Note
+import co.tiagoaguiar.evernotekt.add.Add
+import co.tiagoaguiar.evernotekt.add.presentation.AddPresenter
 import co.tiagoaguiar.evernotekt.model.RemoteDataSource
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.observers.DisposableObserver
-import kotlinx.android.synthetic.main.activity_form.*
-import kotlinx.android.synthetic.main.content_form.*
+import kotlinx.android.synthetic.main.activity_form.toolbar
+import kotlinx.android.synthetic.main.content_form.note_editor
+import kotlinx.android.synthetic.main.content_form.note_title
 
-class FormActivity : AppCompatActivity(), TextWatcher {
+class FormActivity : AppCompatActivity(), TextWatcher, Add.View {
 
+    private lateinit var addPresenter: AddPresenter
     private var toSave: Boolean = false
     private var noteId: Int? = null
-
-    private val dataSource = RemoteDataSource()
-    private val compositeDisposable = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,24 +30,25 @@ class FormActivity : AppCompatActivity(), TextWatcher {
 
         noteId = intent.extras?.getInt("noteId")
 
+        setupPresenter()
         setupViews()
     }
 
     override fun onStart() {
         super.onStart()
         noteId?.let {
-            getNote(it)
+            addPresenter.getNote(it)
         }
     }
 
     override fun onStop() {
         super.onStop()
-        compositeDisposable.clear()
+        addPresenter.stop()
     }
 
-    private fun getNote(noteId: Int) {
-        val disposable = dataSource.getNote(noteId).subscribeWith(getNoteObserver)
-        compositeDisposable.add(disposable)
+    private fun setupPresenter() {
+        val dataSource = RemoteDataSource()
+        addPresenter = AddPresenter(this, dataSource)
     }
 
     private fun setupViews() {
@@ -75,33 +74,8 @@ class FormActivity : AppCompatActivity(), TextWatcher {
         }
     }
 
-    private val getNoteObserver: DisposableObserver<Note>
-        get() = object : DisposableObserver<Note>() {
-            override fun onComplete() {}
-            override fun onNext(note: Note) {
-                displayNote(note)
-            }
 
-            override fun onError(e: Throwable) {
-                e.printStackTrace()
-                displayError("Erro ao carregar nota")
-            }
-        }
-
-    private val createObserver: DisposableObserver<Note>
-        get() = object : DisposableObserver<Note>() {
-            override fun onComplete() {}
-            override fun onNext(note: Note) {
-                finish()
-            }
-
-            override fun onError(e: Throwable) {
-                e.printStackTrace()
-                displayError("Erro ao criar nota")
-            }
-        }
-
-    fun displayError(message: String) {
+    override fun displayError(message: String) {
         showToast(message)
     }
 
@@ -109,30 +83,26 @@ class FormActivity : AppCompatActivity(), TextWatcher {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
-    private fun displayNote(note: Note?) {
-        // progress
-        if (note != null) {
-            note_title.setText(note.title)
-            note_editor.setText(note.body)
-        } else {
-            // no data
-        }
+    override fun displayNote(title: String, body: String) {
+        note_title.setText(title)
+        note_editor.setText(body)
     }
 
+    override fun returnToHome() {
+        finish()
+    }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {
             return if (toSave && noteId == null) {
-                val note = Note()
-                note.title = note_title.text.toString()
-                note.body = note_editor.text.toString()
+                val title = note_title.text.toString()
+                val body = note_editor.text.toString()
 
-                val disposable = dataSource.createNote(note).subscribeWith(createObserver)
-                compositeDisposable.add(disposable)
+                addPresenter.createNote(title, body)
 
                 true
             } else {
-                finish()
+                returnToHome()
                 true
             }
         }

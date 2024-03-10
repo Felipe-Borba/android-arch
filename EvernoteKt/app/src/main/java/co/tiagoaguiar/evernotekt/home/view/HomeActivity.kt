@@ -12,26 +12,35 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import co.tiagoaguiar.evernotekt.R
 import co.tiagoaguiar.evernotekt.add.view.FormActivity
+import co.tiagoaguiar.evernotekt.home.Home
+import co.tiagoaguiar.evernotekt.home.presentation.HomePresenter
 import co.tiagoaguiar.evernotekt.model.Note
 import co.tiagoaguiar.evernotekt.model.RemoteDataSource
 import com.google.android.material.navigation.NavigationView
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.observers.DisposableObserver
-import kotlinx.android.synthetic.main.activity_home.*
-import kotlinx.android.synthetic.main.app_bar_home.*
-import kotlinx.android.synthetic.main.content_home.*
+import kotlinx.android.synthetic.main.activity_home.drawer_layout
+import kotlinx.android.synthetic.main.activity_home.nav_view
+import kotlinx.android.synthetic.main.app_bar_home.fab
+import kotlinx.android.synthetic.main.app_bar_home.toolbar
+import kotlinx.android.synthetic.main.content_home.home_recycler_view
 
 
-class HomeActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+class HomeActivity : AppCompatActivity(),
+    NavigationView.OnNavigationItemSelectedListener,
+    Home.View {
 
-    private val dataSource = RemoteDataSource()
-    private val compositeDisposable = CompositeDisposable()
+    private lateinit var homePresenter: HomePresenter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
+        setupPresenter()
         setupViews()
+    }
+
+    private fun setupPresenter() {
+        val dataSource = RemoteDataSource()
+        homePresenter = HomePresenter(this, dataSource)
     }
 
     private fun setupViews() {
@@ -60,33 +69,15 @@ class HomeActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onStart() {
         super.onStart()
-        getAllNotes()
+        homePresenter.getAllNotes()
     }
 
     override fun onStop() {
         super.onStop()
-        compositeDisposable.clear()
+        homePresenter.stop()
     }
 
-    private fun getAllNotes() {
-        val disposable = dataSource.listNotes().subscribeWith(notesObserver)
-        compositeDisposable.add(disposable)
-    }
-
-    private val notesObserver: DisposableObserver<List<Note>>
-        get() = object : DisposableObserver<List<Note>>() {
-            override fun onComplete() {}
-            override fun onNext(notes: List<Note>) {
-                displayNotes(notes)
-            }
-
-            override fun onError(e: Throwable) {
-                e.printStackTrace()
-                displayError("Erro ao carregar notas")
-            }
-        }
-
-    fun displayError(message: String) {
+    override fun displayError(message: String) {
         showToast(message)
     }
 
@@ -94,17 +85,16 @@ class HomeActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
-    private fun displayNotes(notes: List<Note>) {
-        // progress
-        if (notes.isNotEmpty()) {
-            home_recycler_view.adapter = NoteAdapter(notes) { note ->
+    override fun displayNotes(notes: List<Note>) {
+        home_recycler_view.adapter =
+            NoteAdapter(notes) { note ->
                 val intent = Intent(baseContext, FormActivity::class.java)
                 intent.putExtra("noteId", note.id)
                 startActivity(intent)
             }
-        } else {
-            // no data
-        }
+    }
+
+    override fun displayEmptyNotes() {
     }
 
     override fun onBackPressed() {
