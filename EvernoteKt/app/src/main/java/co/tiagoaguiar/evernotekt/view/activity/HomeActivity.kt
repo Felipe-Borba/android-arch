@@ -1,4 +1,4 @@
-package co.tiagoaguiar.evernotekt
+package co.tiagoaguiar.evernotekt.view.activity
 
 import android.content.Intent
 import android.os.Bundle
@@ -10,22 +10,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import co.tiagoaguiar.evernotekt.model.Note
-import co.tiagoaguiar.evernotekt.model.RemoteDataSource
+import co.tiagoaguiar.evernotekt.R
+import co.tiagoaguiar.evernotekt.data.model.Note
+import co.tiagoaguiar.evernotekt.data.model.RemoteDataSource
+import co.tiagoaguiar.evernotekt.view.adapter.NoteAdapter
 import com.google.android.material.navigation.NavigationView
-import io.reactivex.Observable
-import io.reactivex.Observer
-import io.reactivex.Scheduler
-import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.disposables.Disposable
 import io.reactivex.observers.DisposableObserver
-import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.app_bar_home.*
 import kotlinx.android.synthetic.main.content_home.*
-import retrofit2.Callback
-import retrofit2.Response
 
 
 class HomeActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {

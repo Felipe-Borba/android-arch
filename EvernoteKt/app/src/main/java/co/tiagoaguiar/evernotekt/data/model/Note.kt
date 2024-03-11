@@ -1,4 +1,4 @@
-package co.tiagoaguiar.evernotekt.model
+package co.tiagoaguiar.evernotekt.data.model
 
 data class Note(
     var id: Int = 0,
