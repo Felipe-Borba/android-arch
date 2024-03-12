@@ -4,12 +4,15 @@ apply plugin: 'kotlin-android'
 
 apply plugin: 'kotlin-android-extensions'
 
+apply plugin: 'kotlin-kapt'
+
 android {
-    compileSdkVersion 34
+    compileSdkVersion 29
+    buildToolsVersion "29.0.2"
     defaultConfig {
         applicationId "co.tiagoaguiar.evernotekt"
         minSdkVersion 17
-        targetSdkVersion 34
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -20,9 +23,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    namespace 'co.tiagoaguiar.evernotekt'
 
     android.defaultConfig.vectorDrawables.useSupportLibrary = true
+
+    dataBinding {
+        enabled = true
+    }
 }
 
 dependencies {
@@ -38,9 +44,19 @@ dependencies {
     implementation "com.squareup.retrofit2:converter-gson:$retrofit_version"
     implementation "com.squareup.retrofit2:adapter-rxjava2:$retrofit_version"
 
-    //Rxjava
+    // RxJava
     implementation "io.reactivex.rxjava2:rxandroid:$rxjava_version"
     implementation "io.reactivex.rxjava2:rxjava:$rxjava_version"
+
+    // Lifecycle
+    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-viewmodel:$lifecycle_version"
+
+    // Mockito
+    testImplementation 'org.mockito:mockito-core:2.19.0'
+    testImplementation('com.nhaarman:mockito-kotlin-kt1.1:1.5.0', { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib' })
+    testImplementation "androidx.arch.core:core-testing:2.0.0"
+
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.2.0'
