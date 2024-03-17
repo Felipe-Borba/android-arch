@@ -1,35 +1,33 @@
 package co.tiagoaguiar.evernotekt.presenter
 
-import androidx.lifecycle.Observer
-import co.tiagoaguiar.evernotekt.Home
-import co.tiagoaguiar.evernotekt.data.model.Note
-import co.tiagoaguiar.evernotekt.view.activities.FormActivity
-import co.tiagoaguiar.evernotekt.view.activities.HomeActivity
-import ru.terrakok.cicerone.Router
+import co.tiagoaguiar.evernotekt.data.Interactor
+import co.tiagoaguiar.evernotekt.data.model.NoteState
+import co.tiagoaguiar.evernotekt.view.HomeView
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.schedulers.Schedulers
 
-class HomePresenter(private var view: Home.View?,
-                    private var interactor: Home.Interactor?,
-                    private val router: Router?) : Home.Presenter, Home.InteractorOutput {
+class HomePresenter(private var interactor: Interactor) {
 
-    override fun onStart() {
-        interactor?.loadNoteList()?.observe((view as HomeActivity), Observer { res ->
-            if (res != null) {
-                onQuerySuccess(res)
-            } else {
-                onQueryError()
-            }
-        })
+    private val compositeDisposable = CompositeDisposable()
+    private lateinit var view: HomeView
+
+    fun bind(view: HomeView) {
+        this.view = view
+        compositeDisposable.add(observeNoteDisplay())
     }
 
-    override fun addNoteClick() {
-        router?.navigateTo(FormActivity.TAG)
+    fun unbind() {
+        if (!compositeDisposable.isDisposed) {
+            compositeDisposable.dispose()
+        }
     }
 
-    override fun onQuerySuccess(data: List<Note>) {
-        view?.displayNotes(data)
-    }
+    private fun observeNoteDisplay() = view.displayNotesIntent()
+        .flatMap { interactor.getAllNotes() }
+        .startWith(NoteState.LoadingState)
+        .subscribeOn((Schedulers.io()))
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe { view.render(it) }
 
-    override fun onQueryError() {
-        view?.displayError("Erro ao carregar dados")
-    }
 }
