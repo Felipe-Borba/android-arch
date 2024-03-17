@@ -9,49 +9,71 @@ import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import co.tiagoaguiar.evernotekt.App
+import co.tiagoaguiar.evernotekt.Home
 import co.tiagoaguiar.evernotekt.R
 import co.tiagoaguiar.evernotekt.data.model.Note
+import co.tiagoaguiar.evernotekt.interactor.HomeInteractor
+import co.tiagoaguiar.evernotekt.presenter.HomePresenter
 import co.tiagoaguiar.evernotekt.view.adapters.NoteAdapter
-import co.tiagoaguiar.evernotekt.viewmodel.HomeViewModel
 import com.google.android.material.navigation.NavigationView
 import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.app_bar_home.*
 import kotlinx.android.synthetic.main.content_home.*
+import ru.terrakok.cicerone.Navigator
+import ru.terrakok.cicerone.Router
+import ru.terrakok.cicerone.commands.Forward
 
 
-class HomeActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+class HomeActivity : AppCompatActivity(),
+    NavigationView.OnNavigationItemSelectedListener, Home.View {
 
-    private lateinit var viewModel: HomeViewModel
+    private val navigator: Navigator? by lazy {
+        Navigator { command ->
+            if (command is Forward) {
+              when(command.screenKey) {
+                  FormActivity.TAG -> startActivity(
+                      Intent(this@HomeActivity, FormActivity::class.java)
+                  )
+              }
+            }
+        }
+    }
+
+    private lateinit var presenter: Home.Presenter
+    private val router: Router? by lazy { App.INSTANCE.cicerone.router }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
-        viewModel = ViewModelProviders.of(this).get(HomeViewModel::class.java)
+        presenter = HomePresenter(this, HomeInteractor(), router)
 
         setupViews()
     }
 
+    override fun onResume() {
+        super.onResume()
+        App.INSTANCE.cicerone.navigatorHolder.setNavigator(navigator)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        App.INSTANCE.cicerone.navigatorHolder.removeNavigator()
+    }
+
     override fun onStart() {
         super.onStart()
-        observeAllNotes()
+        presenter.onStart()
     }
 
-    private fun observeAllNotes() {
-        viewModel.getAllNotes().observe(this, Observer { notes ->
-            if (notes == null) {
-                displayError("Erro ao buscar lista")
-            } else {
-                displayNotes(notes)
-            }
-        })
+    override fun displayError(message: String) {
+        showToast(message)
     }
 
-    private fun displayNotes(notes: List<Note>) {
+    override fun displayNotes(notes: List<Note>) {
         if (notes.isNotEmpty()) {
             home_recycler_view.adapter =
                 NoteAdapter(notes) { note ->
@@ -117,17 +139,12 @@ class HomeActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         home_recycler_view.layoutManager = LinearLayoutManager(this)
     }
 
-    private fun displayError(message: String) {
-        showToast(message)
-    }
-
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
-    fun fabClicked(view: View) {
-        val intent = Intent(baseContext, FormActivity::class.java)
-        startActivity(intent)
+    fun goToAddActivity(view: View) {
+        presenter.addNoteClick()
     }
 
 }

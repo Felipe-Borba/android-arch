@@ -15,8 +15,8 @@ class NoteRepositoryImpl : NoteRepository {
     private val compositeDisposable = CompositeDisposable()
     private val remoteDataSource = RemoteDataSource()
 
-    override fun createNote(note: Note): LiveData<Note> {
-        val data = MutableLiveData<Note>()
+    override fun createNote(note: Note): LiveData<Note?> {
+        val data = MutableLiveData<Note?>()
 
         val disposableObserver = remoteDataSource.createNote(note)
             .observeOn(Schedulers.io())

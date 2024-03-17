@@ -5,6 +5,7 @@ buildscript {
     ext.retrofit_version = '2.6.1'
     ext.rxjava_version = '2.1.1'
     ext.lifecycle_version = '2.1.0-alpha02'
+    ext.cicerone_version = '2.1.0'
     repositories {
         google()
         jcenter()

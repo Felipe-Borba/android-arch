@@ -10,72 +10,85 @@ import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import co.tiagoaguiar.evernotekt.App
+import co.tiagoaguiar.evernotekt.Form
 import co.tiagoaguiar.evernotekt.R
 import co.tiagoaguiar.evernotekt.data.model.Note
-import co.tiagoaguiar.evernotekt.databinding.ActivityFormBinding
-import co.tiagoaguiar.evernotekt.viewmodel.AddViewModel
+import co.tiagoaguiar.evernotekt.interactor.FormInteractor
+import co.tiagoaguiar.evernotekt.presenter.FormPresenter
 import kotlinx.android.synthetic.main.activity_form.*
 import kotlinx.android.synthetic.main.content_form.*
+import ru.terrakok.cicerone.Navigator
+import ru.terrakok.cicerone.Router
+import ru.terrakok.cicerone.commands.Back
 
 /**
  *
  * Setembro, 24 2019
  * @author suporte@moonjava.com.br (Tiago Aguiar).
  */
-class FormActivity : AppCompatActivity(), TextWatcher {
+class FormActivity : AppCompatActivity(), Form.View, TextWatcher {
+
+    companion object {
+        val TAG = "FormActivity"
+    }
+
+    private val navigator: Navigator? by lazy {
+        Navigator { command ->
+            if (command is Back) {
+                finish()
+            }
+        }
+    }
 
     private var toSave: Boolean = false
     private var noteId: Int? = null
 
-    private lateinit var viewModel: AddViewModel
+    private lateinit var presenter: Form.Presenter
+    private val router: Router? by lazy { App.INSTANCE.cicerone.router }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val binding = DataBindingUtil.setContentView<ActivityFormBinding>(this, R.layout.activity_form)
-        viewModel = ViewModelProviders.of(this).get(AddViewModel::class.java)
-        binding.viewModel = viewModel
+        setContentView(R.layout.activity_form)
 
         noteId = intent.extras?.getInt("noteId")
+
+        presenter = FormPresenter(this, FormInteractor(), router)
 
         setupViews()
     }
 
-    private fun setupLiveDataObservers() {
-        viewModel.saved.observe(this, Observer { saved ->
-            if (saved) {
-                finish()
-            } else {
-                displayError("Titulo e nota deve ser informado")
-            }
-        })
-
-        noteId?.let {
-            viewModel.getNote(it).observe(this, Observer { note ->
-                if (note == null) {
-                    displayError("Erro ao buscar nota")
-                } else {
-                    displayNote(note)
-                }
-            })
-        }
-    }
-
     override fun onStart() {
         super.onStart()
-        setupLiveDataObservers()
+        presenter.onStart(noteId)
     }
+
+    override fun onResume() {
+        super.onResume()
+        App.INSTANCE.cicerone.navigatorHolder.setNavigator(navigator)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        App.INSTANCE.cicerone.navigatorHolder.removeNavigator()
+    }
+
 
     private fun saveNoteClicked() {
-        viewModel.createNote()
+        presenter.saveNote(note_title.text.toString(), note_editor.text.toString())
     }
 
-    private fun displayNote(note: Note) {
+    private fun backClicked() {
+        presenter.backPressClick()
+    }
+
+    override fun displayNote(note: Note) {
         note_title.setText(note.title)
         note_editor.setText(note.body)
+    }
+
+    override fun displayError(message: String) {
+        showToast(message)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -84,7 +97,7 @@ class FormActivity : AppCompatActivity(), TextWatcher {
                 saveNoteClicked()
                 true
             } else {
-                finish()
+                backClicked()
                 true
             }
         }
@@ -131,13 +144,8 @@ class FormActivity : AppCompatActivity(), TextWatcher {
         note_editor.addTextChangedListener(this)
     }
 
-
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-    }
-
-    private fun displayError(message: String) {
-        showToast(message)
     }
 
 }
